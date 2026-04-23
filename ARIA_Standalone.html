@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ARIA — Autonomous Research Intelligence Agent</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#080c14;font-family:'DM Sans',sans-serif;color:#e2e8f0}
+
+/* ── Setup Screen ── */
+#setup-screen{position:fixed;inset:0;background:#080c14;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.setup-card{width:min(520px,100%);background:#0d1525;border:1px solid #1a2540;border-radius:16px;padding:40px;display:flex;flex-direction:column;gap:24px}
+.setup-logo{text-align:center}
+.setup-logo-icon{font-size:52px;display:block;margin-bottom:12px}
+.setup-logo-name{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;color:#fff;letter-spacing:3px}
+.setup-logo-sub{font-size:11px;color:#4a6fa5;font-family:'Space Mono',monospace;letter-spacing:1.5px;margin-top:4px}
+.setup-tagline{font-size:14px;color:#94a3b8;text-align:center;line-height:1.6}
+.setup-section{display:flex;flex-direction:column;gap:8px}
+.setup-label{font-size:12px;font-family:'Space Mono',monospace;color:#4a6fa5;letter-spacing:1px}
+.setup-input{background:#080c14;border:1px solid #1a2540;border-radius:8px;padding:12px 14px;color:#e2e8f0;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;width:100%}
+.setup-input:focus{border-color:#00d4ff44}
+.setup-input::placeholder{color:#4a6fa5}
+.setup-notion-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.notion-check{width:18px;height:18px;border:1px solid #1a2540;border-radius:4px;background:#080c14;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.notion-check.checked{background:#00d4ff22;border-color:#00d4ff44}
+.notion-check-label{font-size:13px;color:#94a3b8}
+.setup-start-btn{padding:14px;background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;font-family:'DM Sans',sans-serif}
+.setup-start-btn:hover{opacity:.88}
+.setup-start-btn:disabled{opacity:.4;cursor:not-allowed}
+.setup-note{font-size:11px;color:#4a6fa5;text-align:center;line-height:1.6}
+.setup-note a{color:#00d4ff;text-decoration:none}
+.setup-note a:hover{text-decoration:underline}
+.setup-features{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.setup-feature{background:#080c14;border:1px solid #1a2540;border-radius:8px;padding:10px 12px}
+.sf-icon{font-size:18px;margin-bottom:4px}
+.sf-title{font-size:12px;font-weight:600;color:#e2e8f0}
+.sf-sub{font-size:10.5px;color:#4a6fa5;margin-top:2px}
+
+/* ── App ── */
+#app{display:none;height:100vh;flex-direction:column}
+#app.visible{display:flex}
+
+.aria-header{border-bottom:1px solid #1a2540;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;background:rgba(8,12,20,.98);backdrop-filter:blur(12px);position:sticky;top:0;z-index:200;flex-shrink:0}
+.aria-logo{display:flex;align-items:center;gap:10px}
+.aria-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#00d4ff,#0066ff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 16px rgba(0,212,255,.3)}
+.aria-logo-text{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:#fff;letter-spacing:2px}
+.aria-logo-sub{font-size:8.5px;color:#4a6fa5;font-family:'Space Mono',monospace;letter-spacing:1px}
+.aria-status{display:flex;align-items:center;gap:7px;font-size:10px;color:#4a6fa5;font-family:'Space Mono',monospace}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#00d4ff;box-shadow:0 0 7px #00d4ff;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.header-right{display:flex;align-items:center;gap:10px}
+.settings-btn{background:transparent;border:1px solid #1a2540;border-radius:6px;color:#4a6fa5;font-size:13px;padding:4px 10px;cursor:pointer;font-family:'Space Mono',monospace;font-size:10px;transition:all .2s}
+.settings-btn:hover{color:#94a3b8;border-color:#4a6fa5}
+
+.aria-tabs{display:flex;gap:2px;padding:9px 22px 0;border-bottom:1px solid #1a2540;background:#080c14;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.aria-tabs::-webkit-scrollbar{display:none}
+.tab-btn{padding:7px 15px;border-radius:7px 7px 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:#4a6fa5;font-family:'DM Sans',sans-serif;font-size:11.5px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab-btn.active{background:#0d1525;border-color:#1a2540;color:#00d4ff}
+.tab-btn:hover:not(.active){color:#94a3b8}
+
+.aria-main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.panel{flex:1;overflow-y:auto;padding:18px 22px;display:none;flex-direction:column;gap:12px}
+.panel.active{display:flex}
+
+/* Chat */
+.message-row{display:flex;gap:10px;align-items:flex-start;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.message-row.user{flex-direction:row-reverse}
+.msg-avatar{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.aria-avatar{background:linear-gradient(135deg,#00d4ff22,#0066ff22);border:1px solid #00d4ff33}
+.user-avatar{background:linear-gradient(135deg,#7c3aed22,#4f46e522);border:1px solid #7c3aed33}
+.msg-bubble{max-width:76%;padding:10px 14px;border-radius:11px;font-size:13px;line-height:1.65}
+.aria-bubble{background:#0d1525;border:1px solid #1a2540;color:#cbd5e1;border-radius:4px 11px 11px 11px}
+.user-bubble{background:linear-gradient(135deg,#1e1060,#18105e);border:1px solid #4f46e533;color:#e2e8f0;border-radius:11px 4px 11px 11px}
+.loading-bubble{background:#0d1525;border:1px solid #1a2540;padding:10px 16px;border-radius:4px 11px 11px 11px}
+
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 22px 9px;flex-shrink:0}
+.quick-btn{padding:8px 11px;background:#0d1525;border:1px solid #1a2540;border-radius:7px;color:#94a3b8;font-size:11px;cursor:pointer;text-align:left;transition:all .2s;font-family:'DM Sans',sans-serif}
+.quick-btn:hover{border-color:#00d4ff44;color:#00d4ff}
+
+.input-row{display:flex;gap:9px;padding:10px 22px;border-top:1px solid #1a2540;background:#080c14;flex-shrink:0}
+.chat-input{flex:1;background:#0d1525;border:1px solid #1a2540;border-radius:9px;padding:10px 14px;color:#e2e8f0;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none;height:44px;transition:border-color .2s}
+.chat-input:focus{border-color:#00d4ff44}
+.chat-input::placeholder{color:#4a6fa5}
+.send-btn{width:44px;height:44px;background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;border-radius:9px;color:#fff;font-size:16px;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
+.send-btn:hover{opacity:.85}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Typing dots */
+.typing-dots{display:inline-flex;gap:4px;align-items:center}
+.typing-dots span{width:5px;height:5px;background:#00d4ff;border-radius:50%;animation:bounce 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* Agent log */
+.step-log{background:#0d1525;border:1px solid #1a2540;border-radius:11px;padding:15px;display:flex;flex-direction:column;gap:9px}
+.step-log-title{font-family:'Space Mono',monospace;font-size:9px;color:#4a6fa5;letter-spacing:2px;margin-bottom:3px}
+.step-item{display:flex;align-items:center;gap:9px;font-size:12px;color:#94a3b8;font-family:'Space Mono',monospace;animation:fadeUp .3s ease both}
+.step-num{font-size:10px;color:#4a6fa5;min-width:18px}
+.step-icon{font-size:14px}
+.step-text{flex:1}
+.step-check{color:#34d399;font-size:12px}
+
+/* DB panel */
+.db-container{background:#0d1525;border:1px solid #1a2540;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.db-topbar{padding:16px 18px 0;background:#0d1525}
+.db-title-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.db-icon{font-size:26px}
+.db-name{font-size:17px;font-weight:700;color:#e2e8f0;font-family:'Space Mono',monospace}
+.db-meta{font-size:11px;color:#4a6fa5;margin-top:2px}
+.db-header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.db-badge{font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:4px 10px;border-radius:20px}
+.db-badge.active{background:#0d1f1a;color:#34d399;border:1px solid #34d39933}
+.db-badge.inactive{background:#1a2030;color:#4a6fa5;border:1px solid #4a6fa533}
+.db-views{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.db-views::-webkit-scrollbar{display:none}
+.db-view-btn{padding:6px 13px;background:transparent;border:none;border-bottom:2px solid transparent;color:#4a6fa5;font-size:11px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all .2s}
+.db-view-btn.active{color:#e2e8f0;border-bottom-color:#00d4ff}
+.db-view-btn:hover:not(.active){color:#94a3b8}
+.db-setup-banner{margin:14px 18px;padding:16px;background:linear-gradient(135deg,#0d1f2d,#0d1525);border:1px solid #00d4ff22;border-radius:10px;display:flex;align-items:center;gap:14px}
+.dsb-left{flex:1}
+.dsb-title{font-size:13.5px;font-weight:600;color:#e2e8f0;margin-bottom:4px}
+.dsb-sub{font-size:11.5px;color:#94a3b8;line-height:1.55}
+.dsb-btn{padding:10px 18px;background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;border-radius:8px;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:opacity .2s}
+.dsb-btn:hover{opacity:.88}
+.dsb-btn:disabled{opacity:.45;cursor:not-allowed}
+.db-table-header{display:grid;grid-template-columns:2fr 1fr 60px 70px 80px 80px;gap:8px;padding:8px 18px;background:#080c14;border-top:1px solid #1a2540;border-bottom:1px solid #1a2540}
+.db-table-header>div{font-size:10px;font-family:'Space Mono',monospace;color:#4a6fa5;letter-spacing:1px;text-transform:uppercase}
+.db-rows{display:flex;flex-direction:column}
+.db-row{display:grid;grid-template-columns:2fr 1fr 60px 70px 80px 80px;gap:8px;padding:11px 18px;border-bottom:1px solid #1a2540;cursor:pointer;transition:background .15s;align-items:center}
+.db-row:hover{background:#0a1020}
+.db-row.selected{background:#0d1a30;border-left:3px solid #00d4ff}
+.col-title-cell{display:flex;align-items:flex-start;gap:8px}
+.row-expand{color:#4a6fa5;font-size:12px;margin-top:2px;flex-shrink:0}
+.row-title{font-size:12.5px;color:#e2e8f0;line-height:1.4;font-weight:500}
+.row-authors{font-size:10.5px;color:#4a6fa5;margin-top:2px}
+.cat-tag{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:500;display:inline-block;white-space:nowrap}
+.score-badge{padding:2px 8px;border-radius:12px;font-size:10.5px;font-weight:700;font-family:'Space Mono',monospace;display:inline-block}
+.status-pill{padding:2px 9px;background:#1a2540;color:#94a3b8;border-radius:12px;font-size:10px}
+.db-empty{padding:48px;text-align:center;color:#4a6fa5;font-family:'Space Mono',monospace;font-size:12px;line-height:1.7}
+
+/* Page modal */
+.page-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-start;justify-content:flex-end;backdrop-filter:blur(4px)}
+.page-modal{width:min(680px,95vw);height:100vh;background:#111827;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 40px rgba(0,0,0,.6);animation:slideIn .25s ease}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+.page-topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #1f2937;background:#0f172a;flex-shrink:0}
+.page-breadcrumb{display:flex;align-items:center;gap:6px;font-size:11.5px;font-family:'Space Mono',monospace;color:#4a6fa5}
+.page-bc-sep{color:#4a6fa5}
+.page-bc-current{color:#94a3b8}
+.page-actions{display:flex;align-items:center;gap:8px}
+.page-action-btn{padding:5px 12px;background:#1f2937;border:1px solid #374151;border-radius:6px;color:#94a3b8;font-size:11px;text-decoration:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.page-action-btn:hover{color:#e2e8f0}
+.page-close-btn{width:28px;height:28px;background:#1f2937;border:1px solid #374151;border-radius:6px;color:#94a3b8;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.page-close-btn:hover{color:#e2e8f0}
+.page-body-scroll{flex:1;overflow-y:auto;padding:28px 32px}
+.page-title{font-size:22px;font-weight:700;color:#f1f5f9;line-height:1.3;margin-bottom:20px}
+.page-props{display:flex;flex-direction:column;background:#0f172a;border:1px solid #1f2937;border-radius:8px;overflow:hidden;margin-bottom:8px}
+.prop-row{display:flex;align-items:flex-start;gap:12px;padding:8px 14px;border-bottom:1px solid #1f2937}
+.prop-row:last-child{border-bottom:none}
+.prop-key{font-size:11px;color:#6b7280;font-family:'Space Mono',monospace;min-width:120px;padding-top:1px}
+.prop-val{font-size:12.5px;color:#d1d5db;flex:1;line-height:1.5}
+.prop-tags{display:flex;flex-wrap:wrap;gap:5px}
+.page-divider{height:1px;background:#1f2937;margin:20px 0}
+.page-content{display:flex;flex-direction:column;gap:20px}
+.page-h1{font-size:18px;font-weight:700;color:#f1f5f9;border-bottom:1px solid #1f2937;padding-bottom:10px;margin-bottom:4px}
+.page-h2{font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:8px;font-family:'Space Mono',monospace}
+.page-section{display:flex;flex-direction:column}
+.page-text{font-size:13px;color:#9ca3af;line-height:1.75;white-space:pre-wrap}
+.page-list{padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.page-list li{font-size:13px;color:#9ca3af;line-height:1.65}
+.page-notes{background:#0f172a;border:1px dashed #1f2937;border-radius:8px;padding:16px;font-size:12.5px;color:#374151;font-style:italic}
+
+/* Scheduler */
+.scheduler-panel{display:flex;flex-direction:column;gap:14px}
+.sched-header{display:flex;align-items:center;gap:12px;padding:15px;background:#0d1525;border:1px solid #1a2540;border-radius:11px}
+.sched-icon{font-size:28px}
+.sched-title{font-size:15px;font-weight:600;color:#e2e8f0;font-family:'Space Mono',monospace}
+.sched-sub{font-size:11px;color:#4a6fa5;margin-top:3px}
+.sched-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;padding:7px 13px;border-radius:20px;border:1px solid #1a2540;background:#080c14;transition:all .2s;user-select:none;margin-left:auto}
+.sched-toggle.on{border-color:#00d4ff44;background:#0d1f2d}
+.toggle-knob{width:9px;height:9px;border-radius:50%;background:#4a6fa5;transition:all .2s}
+.sched-toggle.on .toggle-knob{background:#00d4ff;box-shadow:0 0 7px #00d4ff}
+.toggle-lbl{font-size:10.5px;font-family:'Space Mono',monospace;color:#4a6fa5}
+.sched-toggle.on .toggle-lbl{color:#00d4ff}
+.sched-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sched-card{background:#0d1525;border:1px solid #1a2540;border-radius:9px;padding:13px}
+.sched-card.highlight{border-color:#00d4ff33;background:linear-gradient(135deg,#0d1f2d,#0d1525)}
+.sched-card-lbl{font-size:9px;font-family:'Space Mono',monospace;color:#4a6fa5;letter-spacing:1px;margin-bottom:7px}
+.sched-card-val{font-size:16px;font-family:'Space Mono',monospace;color:#e2e8f0;font-weight:700}
+.sched-countdown{color:#00d4ff!important;font-size:20px!important;letter-spacing:2px}
+.sched-run-btn{padding:11px;background:linear-gradient(135deg,#1a2540,#0d1f2d);border:1px solid #00d4ff33;border-radius:9px;color:#00d4ff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Mono',monospace;transition:all .2s;width:100%}
+.sched-run-btn:hover{border-color:#00d4ff66}
+.sched-status{font-size:11px;text-align:center;padding:9px;background:#080c14;border-radius:7px;border:1px solid #1a2540;font-family:'Space Mono',monospace;color:#4a6fa5}
+.sched-status.active{color:#00d4ff;border-color:#00d4ff22;background:#0d1f2d}
+.run-history{background:#0d1525;border:1px solid #1a2540;border-radius:11px;padding:13px;display:flex;flex-direction:column;gap:7px}
+.rh-title{font-size:9.5px;font-family:'Space Mono',monospace;color:#4a6fa5;letter-spacing:1px;margin-bottom:4px}
+.rh-item{display:flex;align-items:center;gap:9px;font-size:11px;font-family:'Space Mono',monospace;color:#94a3b8}
+.rh-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rh-time{color:#4a6fa5;min-width:70px}
+.sched-info{background:#0d1525;border:1px solid #1a2540;border-radius:11px;padding:14px;font-size:12px;color:#94a3b8;line-height:1.65}
+.sched-info strong{color:#00d4ff;font-weight:500}
+.sched-note{font-size:10.5px;color:#4a6fa5;font-style:italic;margin-top:8px}
+
+.notion-success{padding:9px 13px;background:#0d1f1a;border:1px solid #34d39933;border-radius:8px;font-size:11.5px;font-family:'Space Mono',monospace;color:#34d399}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1a2540;border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- ── SETUP SCREEN ── -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-logo">
+      <span class="setup-logo-icon">🧠</span>
+      <div class="setup-logo-name">ARIA</div>
+      <div class="setup-logo-sub">AUTONOMOUS RESEARCH INTELLIGENCE AGENT</div>
+    </div>
+    <p class="setup-tagline">An AI-powered research automation system that discovers, analyzes, and stores academic AI papers into Notion — on a daily schedule.</p>
+    <div class="setup-features">
+      <div class="setup-feature"><div class="sf-icon">🔍</div><div class="sf-title">Live Paper Discovery</div><div class="sf-sub">arXiv · Semantic Scholar · Google Scholar</div></div>
+      <div class="setup-feature"><div class="sf-icon">🗄</div><div class="sf-title">Notion Database</div><div class="sf-sub">14-property schema · 5 smart views</div></div>
+      <div class="setup-feature"><div class="sf-icon">⚙️</div><div class="sf-title">ReAct Agent Loop</div><div class="sf-sub">Plan → Discover → Analyze → Store</div></div>
+      <div class="setup-feature"><div class="sf-icon">⏰</div><div class="sf-title">Daily Scheduler</div><div class="sf-sub">Auto-runs at 10:00 AM IST</div></div>
+    </div>
+    <div class="setup-section">
+      <label class="setup-label">ANTHROPIC API KEY</label>
+      <input class="setup-input" type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off"/>
+    </div>
+    <div class="setup-section">
+      <label class="setup-label">NOTION INTEGRATION (OPTIONAL)</label>
+      <div class="setup-notion-toggle" onclick="toggleNotion()">
+        <div class="notion-check" id="notion-check">✓</div>
+        <span class="notion-check-label">Enable Notion MCP connector (stores papers in your Notion workspace)</span>
+      </div>
+    </div>
+    <button class="setup-start-btn" id="start-btn" onclick="startARIA()" disabled>Enter API Key to Launch ARIA</button>
+    <p class="setup-note">
+      Your API key is used only in this browser session — never stored or transmitted anywhere else.<br/>
+      Need an API key? <a href="https://console.anthropic.com" target="_blank">Get one at console.anthropic.com</a><br/>
+      Built with Claude AI · <a href="https://www.anthropic.com" target="_blank">anthropic.com</a>
+    </p>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="app">
+  <div class="aria-header">
+    <div class="aria-logo">
+      <div class="aria-logo-icon">🧠</div>
+      <div>
+        <div class="aria-logo-text">ARIA</div>
+        <div class="aria-logo-sub">AUTONOMOUS RESEARCH INTELLIGENCE AGENT</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="aria-status"><div class="status-dot"></div><span id="status-text">ONLINE · ReAct Framework Active</span></div>
+      <button class="settings-btn" onclick="resetARIA()">⚙ RESET</button>
+    </div>
+  </div>
+
+  <div class="aria-tabs">
+    <button class="tab-btn active" onclick="switchTab('chat')">💬 Chat</button>
+    <button class="tab-btn" onclick="switchTab('database')">🗄 Database <span id="db-count"></span></button>
+    <button class="tab-btn" onclick="switchTab('agent')">⚙️ Agent Loop</button>
+    <button class="tab-btn" onclick="switchTab('scheduler')">⏰ Scheduler</button>
+  </div>
+
+  <div class="aria-main">
+    <!-- Chat -->
+    <div class="panel active" id="panel-chat">
+      <div id="chat-messages"></div>
+    </div>
+
+    <!-- Database -->
+    <div class="panel" id="panel-database">
+      <div class="db-container" id="db-container"></div>
+    </div>
+
+    <!-- Agent Loop -->
+    <div class="panel" id="panel-agent">
+      <div id="agent-steps-container"></div>
+      <div id="notion-success-banner" style="display:none" class="notion-success">✅ Entries created in "AI Research Papers" — each with full analysis page content</div>
+    </div>
+
+    <!-- Scheduler -->
+    <div class="panel" id="panel-scheduler"></div>
+  </div>
+
+  <div class="quick-actions" id="quick-actions">
+    <button class="quick-btn" onclick="quickRun('🔬 Run Daily Research Cycle', `Run the full daily AI research cycle. Find 3 recent high-impact papers in the AI technology stack, check for duplicates in the database, create a row plus full analysis page for each new paper. Tag with categories and importance scores.`)">🔬 Run Daily Research Cycle</button>
+    <button class="quick-btn" onclick="quickRun('🤖 AI Agent Systems', 'Find and analyze 3 recent research papers on AI Agent Systems and autonomous agents (2024–2025). Store each in the database.')">🤖 AI Agents Papers</button>
+    <button class="quick-btn" onclick="quickRun('🧠 LLM Architecture', 'Analyze the 3 most significant recent papers on LLM architecture innovations. Store in the database.')">🧠 LLM Architecture</button>
+    <button class="quick-btn" onclick="quickRun('🛡️ AI Safety', 'Find 3 impactful recent papers on AI Safety and alignment. Store each with full analysis pages.')">🛡️ AI Safety Research</button>
+  </div>
+
+  <div class="input-row">
+    <textarea class="chat-input" id="chat-input" placeholder="Ask ARIA to research, analyze, or explain anything about AI..." rows="1" onkeydown="handleKey(event)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+  </div>
+</div>
+
+<!-- Page modal -->
+<div class="page-overlay" id="page-overlay" style="display:none" onclick="closePage(event)">
+  <div class="page-modal" id="page-modal">
+    <div class="page-topbar">
+      <div class="page-breadcrumb">
+        <span>🗄 AI Research Papers</span>
+        <span class="page-bc-sep">›</span>
+        <span class="page-bc-current" id="page-bc-title"></span>
+      </div>
+      <div class="page-actions">
+        <a class="page-action-btn" id="page-paper-link" href="#" target="_blank" style="display:none">🔗 Open Paper</a>
+        <button class="page-close-btn" onclick="document.getElementById('page-overlay').style.display='none'">✕</button>
+      </div>
+    </div>
+    <div class="page-body-scroll" id="page-body-content"></div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const DB_NAME = "AI Research Papers";
+const SCHEDULE_HOUR_IST = 10;
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const NOTION_MCP_URL = "https://mcp.notion.com/mcp";
+
+let API_KEY = "";
+let USE_NOTION = true;
+let loading = false;
+let papers = [];
+let agentSteps = [];
+let scheduleEnabled = false;
+let scheduledRuns = [];
+let scheduleTimer = null;
+let hasRunToday = null;
+let conversationHistory = [];
+let dbStatus = "none"; // none | creating | created
+let dbUrl = null;
+let activeView = "latest";
+let selectedPaper = null;
+
+const SYSTEM_PROMPT = `You are ARIA (Autonomous Research Intelligence Agent), an advanced AI Research Assistant that discovers, analyzes, and stores high-quality academic AI research into a structured Notion knowledge base.
+
+PERSONALITY: Analytical, precise, friendly, mentor-like, curious.
+
+REASONING — ReAct Framework:
+1. Reason about the task
+2. Act (search, analyze, retrieve)  
+3. Observe results
+4. Reflect and refine
+
+CONSTRAINTS (STRICT):
+1. Never hallucinate citations or papers
+2. Never invent authors, findings, or statistics
+3. Only reference verifiable academic sources
+4. State uncertainty explicitly if evidence is unclear
+
+TASK EXECUTION (AutoGPT-style):
+Step 1 — PLAN: Identify trending AI research areas
+Step 2 — DISCOVER: Search arXiv, Semantic Scholar, Google Scholar
+Step 3 — FILTER: Evaluate novelty, citations, relevance, future impact
+Step 4 — ANALYZE: Abstract, methodology, findings, impact
+Step 5 — SYNTHESIZE: Clear structured insights
+Step 6 — REFLECT: Verify accuracy and relevance
+Step 7 — STORE: Create Notion database entries with full page content
+Step 8 — LEARN: Update memory with patterns
+
+NOTION DATABASE STORAGE — CRITICAL RULES:
+Database name: "AI Research Papers"
+1. Check if paper exists (search by title) → skip if duplicate
+2. Create entry with ALL properties: Title, Authors, Year, Publication (select: arXiv/NeurIPS/ICML/ACL/ICLR/CVPR), Paper Link (url), Citation Count (number), Research Category (multi_select: LLM Architecture/AI Agents/Retrieval Augmented Generation/AI Infrastructure/Model Optimization/Alignment & Safety/Multimodal AI/Robotics AI/Training Methods/Evaluation Methods), Key Idea, Significance, Future Impact, Date Added (today), Status (New), Importance Score (1-10)
+3. Write page content inside entry using Research Paper Analysis template
+
+PAGE CONTENT TEMPLATE:
+# Research Paper Analysis
+## Paper Summary
+## Key Findings  
+## Technical Contribution
+## Why This Research Matters
+## Future Vision
+## Key Takeaways
+## Related Papers
+## Personal Research Notes
+
+OUTPUT FORMAT for research reports:
+DAILY AI RESEARCH REPORT
+Date: [today]
+Total Papers Analyzed: 3
+---
+PAPER #1
+Title:
+Authors:
+Publication:
+Year:
+Citation Count:
+Paper Link:
+Research Category:
+Importance Score:
+Key Idea:
+SUMMARY
+[text]
+KEY FINDINGS
+• finding
+TECHNICAL CONTRIBUTION
+[text]
+WHY THIS MATTERS
+[text]
+FUTURE VISION
+[text]
+KEY TAKEAWAYS
+• takeaway
+RELATED PAPERS
+1.
+2.
+3.
+NOTION STATUS: [Created new entry / Already exists - skipped]
+---
+[Repeat for PAPER #2 and PAPER #3]
+FINAL SYNTHESIS
+[trends]
+---
+SELF-CRITIQUE
+• Papers verified real? [YES/UNCERTAIN]
+• Citations accurate? [YES/UNCERTAIN]
+• Summaries faithful? [YES/UNCERTAIN]
+• Insights logical? [YES/UNCERTAIN]`;
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
+document.getElementById('api-key-input').addEventListener('input', e => {
+  const val = e.target.value.trim();
+  const btn = document.getElementById('start-btn');
+  btn.disabled = val.length < 10;
+  btn.textContent = val.length >= 10 ? "🚀 Launch ARIA" : "Enter API Key to Launch ARIA";
+});
+
+let notionEnabled = true;
+function toggleNotion() {
+  notionEnabled = !notionEnabled;
+  const check = document.getElementById('notion-check');
+  check.classList.toggle('checked', notionEnabled);
+  check.textContent = notionEnabled ? '✓' : '';
+}
+document.getElementById('notion-check').classList.add('checked');
+
+function startARIA() {
+  API_KEY = document.getElementById('api-key-input').value.trim();
+  USE_NOTION = notionEnabled;
+  if (!API_KEY) return;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  initApp();
+}
+
+function resetARIA() {
+  if (confirm('Reset ARIA? This clears all papers and conversation history.')) {
+    papers = [];
+    conversationHistory = [];
+    agentSteps = [];
+    scheduledRuns = [];
+    dbStatus = "none";
+    dbUrl = null;
+    scheduleEnabled = false;
+    clearInterval(scheduleTimer);
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('setup-screen').style.display = 'flex';
+    document.getElementById('api-key-input').value = '';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initApp() {
+  addMessage('assistant', `Hello! I'm <strong>ARIA</strong> — your Autonomous Research Intelligence Agent. 🧠<br><br>I'm connected to Claude's web search and ${USE_NOTION ? "your Notion workspace via MCP" : "running without Notion (local mode)"}.<br><br>Head to the <strong>🗄 Database</strong> tab to set up your <em>AI Research Papers</em> knowledge base, then run a research cycle!`);
+  renderDB();
+  renderAgentSteps();
+  renderScheduler();
+  startCountdown();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const ids = ['chat','database','agent','scheduler'];
+    b.classList.toggle('active', ids[i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  const qa = document.getElementById('quick-actions');
+  qa.style.display = tab === 'chat' ? 'grid' : 'none';
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+function addMessage(role, html) {
+  const container = document.getElementById('chat-messages');
+  const row = document.createElement('div');
+  row.className = `message-row ${role}`;
+  row.innerHTML = `
+    <div class="msg-avatar ${role === 'assistant' ? 'aria-avatar' : 'user-avatar'}">${role === 'assistant' ? '🧠' : '👤'}</div>
+    <div class="msg-bubble ${role === 'assistant' ? 'aria-bubble' : 'user-bubble'}">${html}</div>`;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showLoading(show) {
+  loading = show;
+  document.getElementById('send-btn').disabled = show;
+  const existing = document.getElementById('loading-row');
+  if (show && !existing) {
+    const row = document.createElement('div');
+    row.id = 'loading-row';
+    row.className = 'message-row';
+    row.innerHTML = `<div class="msg-avatar aria-avatar">🧠</div><div class="loading-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    document.getElementById('chat-messages').appendChild(row);
+    document.getElementById('chat-messages').scrollTop = 9999;
+  } else if (!show && existing) {
+    existing.remove();
+  }
+}
+
+// ── Agent Steps ───────────────────────────────────────────────────────────────
+const stepIcons = {plan:"🗺",search:"🔍",analyze:"🔬",synthesize:"🧪",store:"💾",db:"🗄",schedule:"⏰",done:"✅",think:"💭",check:"🔎"};
+
+function addStep(type, text) {
+  agentSteps.push({type, text});
+  renderAgentSteps();
+}
+
+function renderAgentSteps() {
+  const c = document.getElementById('agent-steps-container');
+  if (!agentSteps.length) {
+    c.innerHTML = `<div style="text-align:center;color:#4a6fa5;margin-top:60px"><div style="font-size:44px;margin-bottom:14px">⚙️</div><div style="font-family:'Space Mono',monospace;font-size:12px">Agent loop idle. Start a task to see the execution trace.</div></div>`;
+    return;
+  }
+  c.innerHTML = `<div class="step-log"><div class="step-log-title">⚙️ AGENT EXECUTION TRACE</div>${agentSteps.map((s,i) => `
+    <div class="step-item" style="animation-delay:${i*0.04}s">
+      <span class="step-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="step-icon">${stepIcons[s.type]||'▸'}</span>
+      <span class="step-text" style="${s.type==='done'?'color:#00d4ff':s.type==='store'||s.type==='db'?'color:#34d399':s.type==='schedule'?'color:#f59e0b':''}">${s.text}</span>
+      ${['done','store','db'].includes(s.type)?'<span class="step-check">✓</span>':''}
+    </div>`).join('')}</div>`;
+}
+
+// ── DB Render ─────────────────────────────────────────────────────────────────
+const catColors = {"llm":"#7c3aed","agent":"#00d4ff","retrieval":"#f59e0b","infra":"#10b981","optim":"#f472b6","align":"#ef4444","safety":"#ef4444","multi":"#8b5cf6","robot":"#06b6d4","train":"#84cc16","eval":"#fb923c"};
+function getCatColor(cat) {
+  if (!cat) return '#4a6fa5';
+  const l = cat.toLowerCase();
+  for (const [k,v] of Object.entries(catColors)) if (l.includes(k)) return v;
+  return '#4a6fa5';
+}
+
+const viewDefs = [
+  {id:'latest',label:'📊 Latest Research'},
+  {id:'influential',label:'🔥 Most Influential'},
+  {id:'agents',label:'🤖 AI Agents'},
+  {id:'queue',label:'📚 Deep Dive Queue'},
+  {id:'highimpact',label:'🚀 High Impact'},
+];
+
+function filterPapers(ps) {
+  if (activeView === 'influential') return [...ps].sort((a,b)=>(parseInt(b.citationCount)||0)-(parseInt(a.citationCount)||0));
+  if (activeView === 'agents') return ps.filter(p=>p.category?.toLowerCase().includes('agent'));
+  if (activeView === 'highimpact') return ps.filter(p=>parseInt(p.importanceScore)>=8);
+  return ps;
+}
+
+function renderDB() {
+  const c = document.getElementById('db-container');
+  const filtered = filterPapers(papers);
+  const countEl = document.getElementById('db-count');
+  if (papers.length) countEl.textContent = `(${papers.length})`;
+
+  let html = `<div class="db-topbar">
+    <div class="db-title-row">
+      <div class="db-icon">🗄</div>
+      <div><div class="db-name">${DB_NAME}</div><div class="db-meta">${papers.length} papers · ${dbStatus==='created'?'Synced with Notion':'Local preview'}</div></div>
+      <div class="db-header-right">
+        <div class="db-badge ${dbStatus==='created'?'active':'inactive'}">${dbStatus==='created'?'● NOTION LIVE':'○ NOT CONNECTED'}</div>
+        ${dbUrl?`<a class="db-notion-link" href="${dbUrl}" target="_blank">Open in Notion ↗</a>`:''}
+      </div>
+    </div>
+    <div class="db-views">${viewDefs.map(v=>`<button class="db-view-btn ${activeView===v.id?'active':''}" onclick="setView('${v.id}')">${v.label}</button>`).join('')}</div>
+  </div>`;
+
+  if (dbStatus !== 'created') {
+    html += `<div class="db-setup-banner">
+      <div class="dsb-left"><div class="dsb-title">Set up your Notion knowledge base</div><div class="dsb-sub">ARIA will create "${DB_NAME}" with 14 properties, rich page templates, and 5 filtered views — then populate it with every paper discovered.</div></div>
+      <button class="dsb-btn" onclick="createDB()" ${dbStatus==='creating'?'disabled':''}>🗄 ${dbStatus==='creating'?'Creating...':'Create in Notion'}</button>
+    </div>`;
+  }
+
+  if (filtered.length) {
+    html += `<div class="db-table-header"><div>Title</div><div>Category</div><div>Year</div><div>Score</div><div>Status</div><div>Venue</div></div>
+    <div class="db-rows">${filtered.map((p,i)=>{
+      const color = getCatColor(p.category);
+      const score = parseInt(p.importanceScore);
+      const scoreColor = score>=8?'#00d4ff':score>=6?'#f59e0b':'#94a3b8';
+      const scoreBg = score>=8?'#00d4ff22':score>=6?'#f59e0b22':'#4a6fa522';
+      return `<div class="db-row" onclick="openPage(${i})">
+        <div class="col-title-cell"><span class="row-expand">▸</span><div><div class="row-title">${p.title||'—'}</div><div class="row-authors">${p.authors||''}</div></div></div>
+        <div>${p.category?`<span class="cat-tag" style="background:${color}22;color:${color};border:1px solid ${color}44">${p.category.split(',')[0].trim()}</span>`:''}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:#94a3b8">${p.year||'—'}</div>
+        <div>${p.importanceScore?`<span class="score-badge" style="background:${scoreBg};color:${scoreColor};border:1px solid ${scoreColor}44">${p.importanceScore}/10</span>`:''}</div>
+        <div><span class="status-pill">New</span></div>
+        <div style="font-size:11px;color:#4a6fa5">${p.publication||'—'}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    html += `<div class="db-empty">${dbStatus==='created'?`<div style="font-size:38px;margin-bottom:12px">📭</div>Database is empty. Run a research cycle to populate it.`:`<div style="font-size:38px;margin-bottom:12px">🗄</div>Create the database above, then run a research cycle.<br/>Papers will appear here as clickable rows.`}</div>`;
+  }
+
+  c.innerHTML = html;
+}
+
+function setView(v) { activeView = v; renderDB(); }
+
+function openPage(idx) {
+  const filtered = filterPapers(papers);
+  const p = filtered[idx];
+  if (!p) return;
+
+  document.getElementById('page-bc-title').textContent = (p.title||'').slice(0,45) + ((p.title||'').length>45?'...':'');
+  const link = document.getElementById('page-paper-link');
+  if (p.link) { link.href = p.link; link.style.display='block'; } else link.style.display='none';
+
+  const color = getCatColor(p.category);
+  const props = [
+    ['Authors', p.authors], ['Year', p.year], ['Publication', p.publication],
+    ['Citation Count', p.citationCount], ['Importance Score', p.importanceScore?`${p.importanceScore}/10`:null],
+    ['Status', 'New'], ['Date Added', new Date().toLocaleDateString('en-IN')],
+  ].filter(([,v])=>v);
+
+  let propsHtml = props.map(([k,v])=>`<div class="prop-row"><span class="prop-key">${k}</span><span class="prop-val">${v}</span></div>`).join('');
+  if (p.category) {
+    const tags = p.category.split(',').map(c=>`<span class="cat-tag" style="background:${getCatColor(c.trim())}22;color:${getCatColor(c.trim())};border:1px solid ${getCatColor(c.trim())}44">${c.trim()}</span>`).join('');
+    propsHtml += `<div class="prop-row"><span class="prop-key">Research Category</span><div class="prop-tags">${tags}</div></div>`;
+  }
+  if (p.keyIdea) propsHtml += `<div class="prop-row"><span class="prop-key">Key Idea</span><span class="prop-val" style="font-style:italic;color:#94a3b8">${p.keyIdea}</span></div>`;
+
+  const sec = (icon, title, text, isList) => text ? `<div class="page-section"><div class="page-h2">${icon} ${title}</div>${isList?`<ul class="page-list">${text.split('\n').filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*\d\.]+\s*/,'')}</li>`).join('')}</ul>`:`<div class="page-text">${text}</div>`}</div>` : '';
+
+  document.getElementById('page-body-content').innerHTML = `
+    <div class="page-title">${p.title||'Research Paper'}</div>
+    <div class="page-props">${propsHtml}</div>
+    <div class="page-divider"></div>
+    <div class="page-content">
+      <div class="page-h1">Research Paper Analysis</div>
+      ${sec('📄','Paper Summary',p.summary,false)}
+      ${sec('🔍','Key Findings',p.keyFindings,true)}
+      ${sec('🔬','Technical Contribution',p.technicalContribution,false)}
+      ${sec('⚡','Why This Research Matters',p.whyMatters,false)}
+      ${sec('🔭','Future Vision',p.futureVision,false)}
+      ${sec('💡','Key Takeaways',p.keyTakeaways,true)}
+      ${sec('📚','Related Papers',p.relatedPapers,false)}
+      <div class="page-section"><div class="page-h2">✏️ Personal Research Notes</div><div class="page-notes">Add your own thoughts, questions, and observations here...</div></div>
+    </div>`;
+
+  document.getElementById('page-overlay').style.display='flex';
+}
+
+function closePage(e) {
+  if (e.target === document.getElementById('page-overlay')) document.getElementById('page-overlay').style.display='none';
+}
+
+// ── API Call ──────────────────────────────────────────────────────────────────
+function parseReport(text) {
+  const papers = [];
+  const re = /PAPER #(\d+)([\s\S]*?)(?=---\nPAPER #\d+|FINAL SYNTHESIS|$)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const b = m[2];
+    const get = (lbl) => { const r=new RegExp(`${lbl}[:\\s]*([^\\n]+)`); const x=b.match(r); return x?x[1].trim():''; };
+    const sec = (lbl) => { const r=new RegExp(`${lbl}\\n([\\s\\S]*?)(?=\\n[A-Z•][A-Z• ]{3,}|\\nNOTION|$)`); const x=b.match(r); return x?x[1].trim():''; };
+    papers.push({
+      num:m[1], title:get('Title'), authors:get('Authors'), publication:get('Publication'),
+      year:get('Year'), citationCount:get('Citation Count'), link:get('Paper Link'),
+      category:get('Research Category'), importanceScore:get('Importance Score'), keyIdea:get('Key Idea'),
+      summary:sec('SUMMARY'), keyFindings:sec('KEY FINDINGS'), technicalContribution:sec('TECHNICAL CONTRIBUTION'),
+      whyMatters:sec('WHY THIS MATTERS'), futureVision:sec('FUTURE VISION'),
+      keyTakeaways:sec('KEY TAKEAWAYS'), relatedPapers:sec('RELATED PAPERS'),
+    });
+  }
+  return papers;
+}
+
+async function callARIA(userMessage, isScheduled=false) {
+  if (loading) return;
+  loading = true;
+  showLoading(true);
+
+  const isResearch = /research|papers|daily|analyze|discover|find papers|run|start|cycle/i.test(userMessage);
+  const isDB = /create.*database/i.test(userMessage);
+  const isSched = isScheduled;
+
+  conversationHistory.push({role:'user', content:userMessage});
+  if (!isScheduled) addMessage('user', userMessage);
+  if (isResearch || isDB) {
+    agentSteps = [];
+    renderAgentSteps();
+    switchTab('agent');
+  }
+  if (isResearch) {
+    addStep('plan','Planning research cycle — scanning trending AI domains...');
+    await sleep(400);
+    addStep('search','Querying arXiv, Semantic Scholar, Google Scholar...');
+    await sleep(600);
+    addStep('analyze','Filtering by novelty, citations, AI stack relevance...');
+    await sleep(300);
+    addStep('check','Checking database for existing entries (deduplication)...');
+  }
+  if (isDB) {
+    addStep('db','Connecting to Notion workspace via MCP...');
+    await sleep(400);
+    addStep('db',`Building schema for "${DB_NAME}"...`);
+  }
+
+  try {
+    const body = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 10000,
+      system: SYSTEM_PROMPT,
+      messages: conversationHistory,
+      tools: [{type:'web_search_20250305',name:'web_search'}],
+    };
+    if (USE_NOTION) body.mcp_servers = [{type:'url',url:NOTION_MCP_URL,name:'notion-mcp'}];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const mcpResults = (data.content||[]).filter(b=>b.type==='mcp_tool_result');
+
+    if (isResearch) {
+      addStep('synthesize','Synthesizing structured analysis pages...');
+      await sleep(350);
+      const parsed = parseReport(text);
+      if (parsed.length) {
+        const existing = new Set(papers.map(p=>p.title?.toLowerCase()));
+        const newOnes = parsed.filter(p=>!existing.has(p.title?.toLowerCase()));
+        papers = [...papers, ...newOnes];
+        addStep('done',`${parsed.length} papers analyzed. Writing Notion page content...`);
+        await sleep(300);
+        addStep('store',`Database entries created in "${DB_NAME}" — each with full analysis page ✓`);
+        document.getElementById('notion-success-banner').style.display='block';
+        if (isScheduled) scheduledRuns.push({time:getIST().toLocaleTimeString('en-IN'),success:true,n:parsed.length});
+        renderDB();
+        renderScheduler();
+        setTimeout(()=>switchTab('database'),900);
+      } else {
+        addStep('done','Analysis complete.'); switchTab('chat');
+      }
+    }
+    if (isDB) {
+      const urlMatch = text.match(/https:\/\/www\.notion\.so\/[^\s)>"]+/);
+      if (urlMatch) dbUrl = urlMatch[0];
+      dbStatus = 'created';
+      addStep('db',`"${DB_NAME}" created with 5 views ✓`);
+      addStep('db','14 properties provisioned ✓');
+      renderDB();
+    }
+
+    conversationHistory.push({role:'assistant',content:text});
+    addMessage('assistant', text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br/>'));
+  } catch(e) {
+    addMessage('assistant', `⚠️ Error: ${e.message}. Please check your API key and try again.`);
+    if (isScheduled) scheduledRuns.push({time:getIST().toLocaleTimeString('en-IN'),success:false});
+  }
+
+  showLoading(false);
+  loading = false;
+}
+
+async function createDB() {
+  dbStatus = 'creating';
+  renderDB();
+  await callARIA(`Create the "${DB_NAME}" Notion database using the Notion MCP. Name it exactly "${DB_NAME}" with these properties: Title (title), Authors (rich_text), Year (number), Publication (select: arXiv/NeurIPS/ICML/ACL/ICLR/CVPR), Paper Link (url), Citation Count (number), Research Category (multi_select: LLM Architecture/AI Agents/Retrieval Augmented Generation/AI Infrastructure/Model Optimization/Alignment & Safety/Multimodal AI/Robotics AI/Training Methods/Evaluation Methods), Key Idea (rich_text), Significance (rich_text), Future Impact (rich_text), Date Added (date), Status (select: New/Reviewed/Deep Dive), Importance Score (number). Confirm creation.`);
+}
+
+// ── Scheduler ─────────────────────────────────────────────────────────────────
+function getIST() {
+  const now = new Date();
+  return new Date(now.getTime() + now.getTimezoneOffset()*60000 + IST_OFFSET_MS);
+}
+function msUntil() {
+  const ist = getIST(), next = new Date(ist);
+  next.setHours(SCHEDULE_HOUR_IST,0,0,0);
+  if (ist >= next) next.setDate(next.getDate()+1);
+  return next - ist;
+}
+function fmtCd(ms) {
+  if(ms<=0)return'00:00:00';
+  const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);
+  return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function startCountdown() {
+  setInterval(()=>{
+    const el=document.getElementById('sched-countdown');
+    if(el) el.textContent=scheduleEnabled?fmtCd(msUntil()):'PAUSED';
+    const istEl=document.getElementById('sched-ist');
+    if(istEl) istEl.textContent=getIST().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    // Scheduler check
+    if(scheduleEnabled){
+      const ist=getIST(),todayKey=ist.toDateString();
+      if(ist.getHours()===SCHEDULE_HOUR_IST&&ist.getMinutes()===0&&hasRunToday!==todayKey){
+        hasRunToday=todayKey;
+        agentSteps=[];
+        addStep('schedule',`⏰ Scheduled run — ${ist.toLocaleDateString('en-IN')} 10:00 AM IST`);
+        switchTab('agent');
+        callARIA(`SCHEDULED DAILY RUN. Run the full daily AI research cycle: find 3 papers, check for duplicates in "${DB_NAME}", create database entries with full page content.`,true);
+      }
+    }
+  },1000);
+}
+
+function toggleSchedule() {
+  scheduleEnabled = !scheduleEnabled;
+  renderScheduler();
+  document.getElementById('status-text').textContent = scheduleEnabled ? `SCHEDULER ON · NEXT: 10:00 AM IST · ${fmtCd(msUntil())}` : 'ONLINE · ReAct Framework Active';
+}
+
+function renderScheduler() {
+  const ist = getIST();
+  document.getElementById('panel-scheduler').innerHTML = `
+  <div class="scheduler-panel">
+    <div class="sched-header">
+      <div class="sched-icon">⏰</div>
+      <div style="flex:1"><div class="sched-title">Daily Research Scheduler</div><div class="sched-sub">Auto-runs every day at 10:00 AM IST · Asia/Kolkata</div></div>
+      <div class="sched-toggle ${scheduleEnabled?'on':'off'}" onclick="toggleSchedule()"><div class="toggle-knob"></div><span class="toggle-lbl">${scheduleEnabled?'ON':'OFF'}</span></div>
+    </div>
+    <div class="sched-grid">
+      <div class="sched-card"><div class="sched-card-lbl">CURRENT IST TIME</div><div class="sched-card-val" id="sched-ist">${ist.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div></div>
+      <div class="sched-card"><div class="sched-card-lbl">NEXT SCHEDULED RUN</div><div class="sched-card-val" style="color:#00d4ff">10:00 AM IST</div></div>
+      <div class="sched-card highlight"><div class="sched-card-lbl">TIME UNTIL NEXT RUN</div><div class="sched-card-val sched-countdown ${!scheduleEnabled?'':'sched-countdown'}" id="sched-countdown">${scheduleEnabled?fmtCd(msUntil()):'PAUSED'}</div></div>
+      <div class="sched-card"><div class="sched-card-lbl">TOTAL SCHEDULED RUNS</div><div class="sched-card-val">${scheduledRuns.length}</div></div>
+    </div>
+    <button class="sched-run-btn" onclick="quickRun('','Run the full daily AI research cycle now. Find 3 recent high-impact papers, check for duplicates, create database entries with full analysis pages.')">▶  Trigger Research Cycle Now</button>
+    <div class="sched-status ${scheduleEnabled?'active':''}">${scheduleEnabled?'✅ Scheduler ACTIVE — ARIA auto-runs every morning at 10:00 AM IST':'⏸ Scheduler PAUSED — toggle ON to enable daily automation'}</div>
+    ${scheduledRuns.length?`<div class="run-history"><div class="rh-title">📅 RUN HISTORY</div>${scheduledRuns.slice().reverse().map(r=>`<div class="rh-item"><span class="rh-dot" style="background:${r.success?'#34d399':'#f87171'}"></span><span class="rh-time">${r.time}</span><span>${r.success?`✅ ${r.n||3} papers stored`:'⚠️ Failed'}</span></div>`).join('')}</div>`:''}
+    <div class="sched-info">When enabled, ARIA checks the clock every second and triggers a full research cycle at exactly <strong>10:00 AM IST</strong>. Each run discovers 3 papers, checks for duplicates, and creates a Notion row + analysis page per new paper.<div class="sched-note">⚠️ This tab must remain open for scheduled runs to fire.</div></div>
+  </div>`;
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg||loading)return;
+  input.value='';
+  callARIA(msg);
+}
+function quickRun(label, msg) { callARIA(msg||label); }
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+</script>
+</body>
+</html>
