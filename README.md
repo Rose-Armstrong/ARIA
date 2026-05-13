@@ -73,12 +73,12 @@ Every day at **10:00 AM IST**, ARIA:
 │                        ARIA Stack                       │
 ├──────────────────┬──────────────────────────────────────┤
 │  Frontend        │  React (JSX Artifact in Claude.ai)   │
-│  Agent Brain     │  Claude claude-sonnet-4-20250514              │
-│  Web Research    │  web_search_20250305 tool             │
+│  Agent Brain     │  Claude claude-sonnet-4-20250514     │
+│  Web Research    │  web_search_20250305 tool            │
 │  Knowledge Base  │  Notion MCP Connector                │
-│  Scheduler       │  JavaScript setInterval (IST)         │
-│  Memory          │  Conversation history array           │
-│  Deduplication   │  Title-match in storage prompt        │
+│  Scheduler       │  JavaScript setInterval (IST)        │
+│  Memory          │  Conversation history array          │
+│  Deduplication   │  Title-match in storage prompt       │
 └──────────────────┴──────────────────────────────────────┘
 ```
 
@@ -280,6 +280,7 @@ ARIA/
 ├── ARIA.jsx                      # Main React artifact (free prototype)
 ├── ARIA_Standalone.html          # Standalone HTML version (requires API key)
 ├── ARIA_Portfolio_Case_Study.docx  # Full build documentation
+├── ARIA.mp4                        # Prototype video
 └── README.md                     # This file
 ```
 
